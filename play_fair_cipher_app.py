@@ -1,0 +1,263 @@
+import streamlit as st
+
+# ─────────────────────────────────────────────
+# PLAYFAIR CIPHER LOGIC
+# ─────────────────────────────────────────────
+
+def build_grid(keyword):
+    keyword = keyword.upper().replace("J", "I")
+    seen = []
+    for ch in keyword:
+        if ch.isalpha() and ch not in seen:
+            seen.append(ch)
+    for ch in "ABCDEFGHIKLMNOPQRSTUVWXYZ":
+        if ch not in seen:
+            seen.append(ch)
+    return [seen[i*5:(i+1)*5] for i in range(5)]
+
+
+def find_position(grid, letter):
+    for r, row in enumerate(grid):
+        for c, ch in enumerate(row):
+            if ch == letter:
+                return r, c
+    return None
+
+
+def prepare_plaintext(text):
+    text = text.upper().replace("J", "I")
+    text = "".join(ch for ch in text if ch.isalpha())
+    digraphs = []
+    i = 0
+    while i < len(text):
+        a = text[i]
+        if i + 1 == len(text):
+            digraphs.append((a, "X"))
+            i += 1
+        elif text[i] == text[i + 1]:
+            digraphs.append((a, "X"))
+            i += 1
+        else:
+            digraphs.append((a, text[i + 1]))
+            i += 2
+    return digraphs
+
+
+def encrypt_pair(grid, a, b):
+    r1, c1 = find_position(grid, a)
+    r2, c2 = find_position(grid, b)
+    if r1 == r2:
+        rule = "Same Row - Shift Right"
+        enc_a = grid[r1][(c1 + 1) % 5]
+        enc_b = grid[r2][(c2 + 1) % 5]
+    elif c1 == c2:
+        rule = "Same Column - Shift Down"
+        enc_a = grid[(r1 + 1) % 5][c1]
+        enc_b = grid[(r2 + 1) % 5][c2]
+    else:
+        rule = "Rectangle - Swap Corners"
+        enc_a = grid[r1][c2]
+        enc_b = grid[r2][c1]
+    return enc_a, enc_b, rule
+
+
+def encrypt(keyword, plaintext):
+    grid = build_grid(keyword)
+    digraphs = prepare_plaintext(plaintext)
+    steps = []
+    cipher = []
+    for a, b in digraphs:
+        enc_a, enc_b, rule = encrypt_pair(grid, a, b)
+        steps.append({"pair": f"{a}{b}", "rule": rule, "result": f"{enc_a}{enc_b}"})
+        cipher.append(enc_a + enc_b)
+    return grid, digraphs, steps, " ".join(cipher), "".join(cipher)
+
+
+# ─────────────────────────────────────────────
+# PAGE CONFIG
+# ─────────────────────────────────────────────
+
+st.set_page_config(
+    page_title="Playfair Cipher",
+    page_icon="🔐",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ─────────────────────────────────────────────
+# SIDEBAR
+# ─────────────────────────────────────────────
+with st.sidebar:
+    st.title("📖 Instructions")
+    st.markdown("Welcome to the **Playfair Cipher Encryptor!**")
+    st.divider()
+
+    with st.expander("🤔 What is Playfair Cipher?"):
+        st.markdown(
+            "The Playfair Cipher is a **classical encryption technique** that encrypts "
+            "**two letters at a time** (called digraphs) using a 5x5 key grid.\n\n"
+            "It was invented by **Charles Wheatstone in 1854** but became popular "
+            "through **Lord Playfair**, which is why it carries his name.\n\n"
+            "It was even used by the **British military in World War I.**"
+        )
+
+    with st.expander("🚀 How to Use This App"):
+        st.markdown(
+            "1. Enter a **Keyword** — any word you like, this builds your secret 5x5 grid\n\n"
+            "2. Enter a **Plaintext** — the message you want to encrypt\n\n"
+            "3. Click the **Encrypt** button\n\n"
+            "4. The app will show you the **grid**, **digraphs**, **step by step encryption** and the final **ciphertext**"
+        )
+
+    with st.expander("📏 The 3 Encryption Rules"):
+        st.markdown("**Rule 1 — Same Row: Shift Right**")
+        st.markdown(
+            "If both letters are in the **same row**, shift each letter "
+            "**one step to the right**. If a letter is at the last column, "
+            "it wraps back to the first column of that row."
+        )
+        st.code("Example: ON → NA")
+
+        st.markdown("---")
+
+        st.markdown("**Rule 2 — Same Column: Shift Down**")
+        st.markdown(
+            "If both letters are in the **same column**, shift each letter "
+            "**one step downward**. If a letter is at the bottom row, "
+            "it wraps back to the top of that column."
+        )
+        st.code("Example: OF → HP")
+
+        st.markdown("---")
+
+        st.markdown("**Rule 3 — Rectangle: Swap Corners**")
+        st.markdown(
+            "If the two letters are in **different rows and different columns**, "
+            "they form a rectangle. Each letter **stays on its own row** but "
+            "**jumps to the column of the other letter**."
+        )
+        st.code("Example: MH → OC")
+        st.markdown(
+            "- M is at Row 1, Col 1\n"
+            "- H is at Row 2, Col 2\n"
+            "- M stays on Row 1 but moves to Col 2 → **O**\n"
+            "- H stays on Row 2 but moves to Col 1 → **C**"
+        )
+
+    with st.expander("💡 Tips"):
+        st.markdown(
+            "- **J** is always replaced with **I** before encrypting\n\n"
+            "- If a pair has **two identical letters** (e.g. LL), insert **X** between them → LX\n\n"
+            "- If the message ends with a **single unpaired letter**, add **X** to complete the pair\n\n"
+            "- Both sender and receiver must share the **same keyword** to decrypt\n\n"
+            "- The keyword should be kept **secret** — it is your encryption key"
+        )
+
+    with st.expander("📝 Example"):
+        st.markdown("**Keyword:** SUPERMAN")
+        st.markdown("**Plaintext:** HELLO")
+        st.markdown("**After preparing digraphs:** HE | LX | OX")
+        st.markdown("---")
+        st.markdown("**HE** → Same Column → **BQ**")
+        st.markdown("**LX** → Rectangle → **OW**")
+        st.markdown("**OX** → Same Column → **XP**")
+        st.markdown("---")
+        st.markdown("**Final Ciphertext: BQOWXP**")
+
+    st.divider()
+    st.caption("Built with love using Streamlit")
+# ─────────────────────────────────────────────
+# MAIN PAGE
+# ─────────────────────────────────────────────
+
+st.title("🔐 Playfair Cipher Encryptor")
+st.markdown("Enter a **keyword** and a **plaintext message** to encrypt using the Playfair Cipher.")
+
+st.divider()
+
+col1, col2 = st.columns(2)
+with col1:
+    keyword = st.text_input("🗝️ Keyword", placeholder="e.g. SUPERMAN")
+with col2:
+    plaintext = st.text_input("📝 Plaintext", placeholder="e.g. HELLO")
+
+encrypt_btn = st.button("🔒 Encrypt", use_container_width=True, type="primary")
+
+if encrypt_btn:
+    if not keyword.strip():
+        st.error("Please enter a keyword!")
+    elif not plaintext.strip():
+        st.error("Please enter a plaintext message!")
+    else:
+        grid, digraphs, steps, cipher_spaced, cipher_clean = encrypt(keyword.strip(), plaintext.strip())
+
+        st.divider()
+
+        # ── Grid display ──
+        st.subheader("📊 5x5 Key Grid")
+        st.markdown(f"Built from keyword: **{keyword.upper()}**")
+
+        style = (
+            "<style>"
+            ".grid-table { border-collapse: collapse; margin: 10px auto; }"
+            ".grid-table td {"
+            "  width: 48px; height: 48px;"
+            "  text-align: center; vertical-align: middle;"
+            "  font-size: 20px; font-weight: bold;"
+            "  border: 2px solid #4a4a8a;"
+            "  background: #1e1e3f;"
+            "  color: #e0e0ff;"
+            "  border-radius: 6px;"
+            "}"
+            ".grid-header {"
+            "  background: #3a3a6a !important;"
+            "  color: #aaaaff !important;"
+            "  font-size: 13px !important;"
+            "  font-weight: normal !important;"
+            "}"
+            "</style>"
+        )
+
+        grid_html = style
+        grid_html += "<table class='grid-table'>"
+        grid_html += "<tr><td class='grid-header'></td>"
+        for c in range(1, 6):
+            grid_html += f"<td class='grid-header'>C{c}</td>"
+        grid_html += "</tr>"
+        for i, row in enumerate(grid):
+            grid_html += f"<tr><td class='grid-header'>R{i+1}</td>"
+            for ch in row:
+                grid_html += f"<td>{ch}</td>"
+            grid_html += "</tr>"
+        grid_html += "</table>"
+
+        st.markdown(grid_html, unsafe_allow_html=True)
+
+        st.divider()
+
+        # ── Prepared pairs ──
+        st.subheader("✂️ Prepared Digraphs")
+        pairs_display = "  |  ".join([f"**{a}{b}**" for a, b in digraphs])
+        st.markdown(pairs_display)
+
+        st.divider()
+
+        # ── Step by step ──
+        st.subheader("🔄 Encryption Steps")
+        for i, step in enumerate(steps):
+            with st.expander(f"Pair {i+1}: {step['pair']} → {step['result']}", expanded=True):
+                st.markdown(f"- **Rule Applied:** {step['rule']}")
+                st.markdown(f"- **Input Pair:** `{step['pair']}`")
+                st.markdown(f"- **Encrypted Pair:** `{step['result']}`")
+
+        st.divider()
+
+        # ── Final result ──
+        st.subheader("🔐 Ciphertext")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.metric("With spaces", cipher_spaced)
+        with col_b:
+            st.metric("Without spaces", cipher_clean)
+
+        st.success(f"'{plaintext.upper()}' encrypted successfully using key '{keyword.upper()}'!")
