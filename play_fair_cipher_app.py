@@ -358,5 +358,30 @@ if decrypt_btn:
         st.divider()
 
         st.subheader("🔓 Plaintext")
-        st.metric("Decrypted Text", plain_text)
+
+        clean_toggle = st.checkbox(
+            "🧹 Clean output (remove padding X's)",
+            value=False,
+            help="Best-guess removal of X's inserted during encryption. May wrongly remove real X's if your original message contained them."
+        )
+
+        if clean_toggle:
+            cleaned = ""
+            i = 0
+            while i < len(plain_text):
+                if plain_text[i] == "X":
+                    prev_ch = plain_text[i - 1] if i > 0 else None
+                    next_ch = plain_text[i + 1] if i + 1 < len(plain_text) else None
+                    if prev_ch == next_ch or next_ch is None:
+                        i += 1
+                        continue
+                cleaned += plain_text[i]
+                i += 1
+            display_text = cleaned
+        else:
+            display_text = plain_text
+
+        st.metric("Decrypted Text", display_text)
+        if clean_toggle:
+            st.caption("⚠️ X's removed as best-guess padding cleanup. If your original message had real X's, they may be missing.")
         st.success(f"'{message.upper()}' decrypted successfully using key '{keyword.upper()}'!")
