@@ -197,6 +197,51 @@ with st.sidebar:
     st.caption("Built with love using Streamlit")
 
 # ─────────────────────────────────────────────
+# SESSION STATE INIT
+# ─────────────────────────────────────────────
+if "mode" not in st.session_state:
+    st.session_state.mode = None
+if "result" not in st.session_state:
+    st.session_state.result = None
+
+# ─────────────────────────────────────────────
+# GRID HTML HELPER
+# ─────────────────────────────────────────────
+def render_grid(grid):
+    style = (
+        "<style>"
+        ".grid-table { border-collapse: collapse; margin: 10px auto; }"
+        ".grid-table td {"
+        "  width: 48px; height: 48px;"
+        "  text-align: center; vertical-align: middle;"
+        "  font-size: 20px; font-weight: bold;"
+        "  border: 2px solid #4a4a8a;"
+        "  background: #1e1e3f;"
+        "  color: #e0e0ff;"
+        "  border-radius: 6px;"
+        "}"
+        ".grid-header {"
+        "  background: #3a3a6a !important;"
+        "  color: #aaaaff !important;"
+        "  font-size: 13px !important;"
+        "  font-weight: normal !important;"
+        "}"
+        "</style>"
+    )
+    html = style + "<table class='grid-table'>"
+    html += "<tr><td class='grid-header'></td>"
+    for c in range(1, 6):
+        html += f"<td class='grid-header'>C{c}</td>"
+    html += "</tr>"
+    for i, row in enumerate(grid):
+        html += f"<tr><td class='grid-header'>R{i+1}</td>"
+        for ch in row:
+            html += f"<td>{ch}</td>"
+        html += "</tr>"
+    html += "</table>"
+    return html
+
+# ─────────────────────────────────────────────
 # MAIN PAGE
 # ─────────────────────────────────────────────
 
@@ -218,7 +263,7 @@ with col_dec:
     decrypt_btn = st.button("🔓 Decrypt", use_container_width=True, type="secondary")
 
 # ─────────────────────────────────────────────
-# ENCRYPT
+# HANDLE BUTTON CLICKS — store results in session
 # ─────────────────────────────────────────────
 if encrypt_btn:
     if not keyword.strip():
@@ -227,71 +272,16 @@ if encrypt_btn:
         st.error("Please enter a message!")
     else:
         grid, digraphs, steps, cipher_text = encrypt(keyword.strip(), message.strip())
+        st.session_state.mode = "encrypt"
+        st.session_state.result = {
+            "keyword": keyword.strip(),
+            "message": message.strip(),
+            "grid": grid,
+            "digraphs": digraphs,
+            "steps": steps,
+            "output": cipher_text,
+        }
 
-        st.divider()
-
-        st.subheader("📊 5x5 Key Grid")
-        st.markdown(f"Built from keyword: **{keyword.upper()}**")
-
-        style = (
-            "<style>"
-            ".grid-table { border-collapse: collapse; margin: 10px auto; }"
-            ".grid-table td {"
-            "  width: 48px; height: 48px;"
-            "  text-align: center; vertical-align: middle;"
-            "  font-size: 20px; font-weight: bold;"
-            "  border: 2px solid #4a4a8a;"
-            "  background: #1e1e3f;"
-            "  color: #e0e0ff;"
-            "  border-radius: 6px;"
-            "}"
-            ".grid-header {"
-            "  background: #3a3a6a !important;"
-            "  color: #aaaaff !important;"
-            "  font-size: 13px !important;"
-            "  font-weight: normal !important;"
-            "}"
-            "</style>"
-        )
-
-        grid_html = style + "<table class='grid-table'>"
-        grid_html += "<tr><td class='grid-header'></td>"
-        for c in range(1, 6):
-            grid_html += f"<td class='grid-header'>C{c}</td>"
-        grid_html += "</tr>"
-        for i, row in enumerate(grid):
-            grid_html += f"<tr><td class='grid-header'>R{i+1}</td>"
-            for ch in row:
-                grid_html += f"<td>{ch}</td>"
-            grid_html += "</tr>"
-        grid_html += "</table>"
-
-        st.markdown(grid_html, unsafe_allow_html=True)
-
-        st.divider()
-
-        st.subheader("✂️ Prepared Digraphs")
-        pairs_display = "  |  ".join([f"**{a}{b}**" for a, b in digraphs])
-        st.markdown(pairs_display)
-
-        st.divider()
-
-        st.subheader("🔄 Encryption Steps")
-        for i, step in enumerate(steps):
-            with st.expander(f"Pair {i+1}: {step['pair']} → {step['result']}", expanded=True):
-                st.markdown(f"- **Rule Applied:** {step['rule']}")
-                st.markdown(f"- **Input Pair:** `{step['pair']}`")
-                st.markdown(f"- **Encrypted Pair:** `{step['result']}`")
-
-        st.divider()
-
-        st.subheader("🔐 Ciphertext")
-        st.metric("Encrypted Text", cipher_text)
-        st.success(f"'{message.upper()}' encrypted successfully using key '{keyword.upper()}'!")
-
-# ─────────────────────────────────────────────
-# DECRYPT
-# ─────────────────────────────────────────────
 if decrypt_btn:
     if not keyword.strip():
         st.error("Please enter a keyword!")
@@ -299,64 +289,53 @@ if decrypt_btn:
         st.error("Please enter a ciphertext message!")
     else:
         grid, digraphs, steps, plain_text = decrypt(keyword.strip(), message.strip())
+        st.session_state.mode = "decrypt"
+        st.session_state.result = {
+            "keyword": keyword.strip(),
+            "message": message.strip(),
+            "grid": grid,
+            "digraphs": digraphs,
+            "steps": steps,
+            "output": plain_text,
+        }
 
-        st.divider()
+# ─────────────────────────────────────────────
+# RENDER RESULTS FROM SESSION STATE
+# ─────────────────────────────────────────────
+if st.session_state.result:
+    r = st.session_state.result
+    mode = st.session_state.mode
 
-        st.subheader("📊 5x5 Key Grid")
-        st.markdown(f"Built from keyword: **{keyword.upper()}**")
+    st.divider()
 
-        style = (
-            "<style>"
-            ".grid-table { border-collapse: collapse; margin: 10px auto; }"
-            ".grid-table td {"
-            "  width: 48px; height: 48px;"
-            "  text-align: center; vertical-align: middle;"
-            "  font-size: 20px; font-weight: bold;"
-            "  border: 2px solid #4a4a8a;"
-            "  background: #1e1e3f;"
-            "  color: #e0e0ff;"
-            "  border-radius: 6px;"
-            "}"
-            ".grid-header {"
-            "  background: #3a3a6a !important;"
-            "  color: #aaaaff !important;"
-            "  font-size: 13px !important;"
-            "  font-weight: normal !important;"
-            "}"
-            "</style>"
-        )
+    st.subheader("📊 5x5 Key Grid")
+    st.markdown(f"Built from keyword: **{r['keyword'].upper()}**")
+    st.markdown(render_grid(r["grid"]), unsafe_allow_html=True)
 
-        grid_html = style + "<table class='grid-table'>"
-        grid_html += "<tr><td class='grid-header'></td>"
-        for c in range(1, 6):
-            grid_html += f"<td class='grid-header'>C{c}</td>"
-        grid_html += "</tr>"
-        for i, row in enumerate(grid):
-            grid_html += f"<tr><td class='grid-header'>R{i+1}</td>"
-            for ch in row:
-                grid_html += f"<td>{ch}</td>"
-            grid_html += "</tr>"
-        grid_html += "</table>"
+    st.divider()
 
-        st.markdown(grid_html, unsafe_allow_html=True)
+    st.subheader("✂️ Prepared Digraphs" if mode == "encrypt" else "✂️ Ciphertext Digraphs")
+    pairs_display = "  |  ".join([f"**{a}{b}**" for a, b in r["digraphs"]])
+    st.markdown(pairs_display)
 
-        st.divider()
+    st.divider()
 
-        st.subheader("✂️ Ciphertext Digraphs")
-        pairs_display = "  |  ".join([f"**{a}{b}**" for a, b in digraphs])
-        st.markdown(pairs_display)
+    st.subheader("🔄 Encryption Steps" if mode == "encrypt" else "🔄 Decryption Steps")
+    label = "Encrypted Pair" if mode == "encrypt" else "Decrypted Pair"
+    for idx, step in enumerate(r["steps"]):
+        with st.expander(f"Pair {idx+1}: {step['pair']} → {step['result']}", expanded=True):
+            st.markdown(f"- **Rule Applied:** {step['rule']}")
+            st.markdown(f"- **Input Pair:** `{step['pair']}`")
+            st.markdown(f"- **{label}:** `{step['result']}`")
 
-        st.divider()
+    st.divider()
 
-        st.subheader("🔄 Decryption Steps")
-        for i, step in enumerate(steps):
-            with st.expander(f"Pair {i+1}: {step['pair']} → {step['result']}", expanded=True):
-                st.markdown(f"- **Rule Applied:** {step['rule']}")
-                st.markdown(f"- **Input Pair:** `{step['pair']}`")
-                st.markdown(f"- **Decrypted Pair:** `{step['result']}`")
+    if mode == "encrypt":
+        st.subheader("🔐 Ciphertext")
+        st.metric("Encrypted Text", r["output"])
+        st.success(f"'{r['message'].upper()}' encrypted successfully using key '{r['keyword'].upper()}'!")
 
-        st.divider()
-
+    else:
         st.subheader("🔓 Plaintext")
 
         clean_toggle = st.checkbox(
@@ -368,6 +347,7 @@ if decrypt_btn:
         if clean_toggle:
             cleaned = ""
             i = 0
+            plain_text = r["output"]
             while i < len(plain_text):
                 if plain_text[i] == "X":
                     prev_ch = plain_text[i - 1] if i > 0 else None
@@ -379,9 +359,9 @@ if decrypt_btn:
                 i += 1
             display_text = cleaned
         else:
-            display_text = plain_text
+            display_text = r["output"]
 
         st.metric("Decrypted Text", display_text)
         if clean_toggle:
             st.caption("⚠️ X's removed as best-guess padding cleanup. If your original message had real X's, they may be missing.")
-        st.success(f"'{message.upper()}' decrypted successfully using key '{keyword.upper()}'!")
+        st.success(f"'{r['message'].upper()}' decrypted successfully using key '{r['keyword'].upper()}'!")
