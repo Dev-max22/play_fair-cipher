@@ -96,7 +96,7 @@ def encrypt(keyword, plaintext):
         enc_a, enc_b, rule = encrypt_pair(grid, a, b)
         steps.append({"pair": f"{a}{b}", "rule": rule, "result": f"{enc_a}{enc_b}"})
         cipher.append(enc_a + enc_b)
-    return grid, digraphs, steps, " ".join(cipher)
+    return grid, digraphs, steps, "".join(cipher)
 
 
 def decrypt(keyword, ciphertext):
@@ -108,7 +108,7 @@ def decrypt(keyword, ciphertext):
         dec_a, dec_b, rule = decrypt_pair(grid, a, b)
         steps.append({"pair": f"{a}{b}", "rule": rule, "result": f"{dec_a}{dec_b}"})
         plain.append(dec_a + dec_b)
-    return grid, digraphs, steps, " ".join(plain)
+    return grid, digraphs, steps, "".join(plain)
 
 
 # ─────────────────────────────────────────────
@@ -191,7 +191,7 @@ with st.sidebar:
         st.markdown("**LX** → Rectangle → **OW**")
         st.markdown("**OX** → Same Column → **XP**")
         st.markdown("---")
-        st.markdown("**Final Ciphertext: BQ OW XP**")
+        st.markdown("**Final Ciphertext: BQOWXP**")
 
     st.divider()
     st.caption("Built with love using Streamlit")
@@ -226,7 +226,7 @@ if encrypt_btn:
     elif not message.strip():
         st.error("Please enter a message!")
     else:
-        grid, digraphs, steps, cipher_spaced = encrypt(keyword.strip(), message.strip())
+        grid, digraphs, steps, cipher_text = encrypt(keyword.strip(), message.strip())
 
         st.divider()
 
@@ -286,7 +286,7 @@ if encrypt_btn:
         st.divider()
 
         st.subheader("🔐 Ciphertext")
-        st.metric("Encrypted Text", cipher_spaced)
+        st.metric("Encrypted Text", cipher_text)
         st.success(f"'{message.upper()}' encrypted successfully using key '{keyword.upper()}'!")
 
 # ─────────────────────────────────────────────
@@ -298,7 +298,7 @@ if decrypt_btn:
     elif not message.strip():
         st.error("Please enter a ciphertext message!")
     else:
-        grid, digraphs, steps, plain_spaced = decrypt(keyword.strip(), message.strip())
+        grid, digraphs, steps, plain_text = decrypt(keyword.strip(), message.strip())
 
         st.divider()
 
@@ -358,5 +358,5 @@ if decrypt_btn:
         st.divider()
 
         st.subheader("🔓 Plaintext")
-        st.metric("Decrypted Text", plain_spaced)
+        st.metric("Decrypted Text", plain_text)
         st.success(f"'{message.upper()}' decrypted successfully using key '{keyword.upper()}'!")
